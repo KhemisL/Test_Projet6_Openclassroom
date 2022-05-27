@@ -12,6 +12,7 @@ router.get("/", auth, productCtrl.getAllProduct);
 router.get("/:id", auth, productCtrl.getOneProduct);
 router.put("/:id", auth, multter, productCtrl.modifyProduct);
 router.delete("/:id", auth, productCtrl.deleteProduct);
+router.post("/:id/like", auth, multter, productCtrl.likeProduct);
 
 
 
