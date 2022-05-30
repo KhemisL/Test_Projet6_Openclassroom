@@ -3,11 +3,12 @@ const express = require("express");
 
 exports.createProduct = (req,res)=>{
 
-     console.log({ ...req.body._id});
+     //console.log({ ...req.body._id});
      //console.log({ file: req.file});
     
     const sauce = JSON.parse(req.body.sauce);
-    delete req.body._id
+    //delete sauce.userId
+    console.log("coucou");
     const product = new Product({
         userId: sauce.userId,
         name: sauce.name,
@@ -21,8 +22,9 @@ exports.createProduct = (req,res)=>{
         usersLiked: [],
         usersDisliked: []
     })
+    console.log("hello");
     product.save()
-     .then((prod)=> res.status(201).json({message: prod}))
+    .then((prod)=> res.status(201).json({message: prod}))
     .catch(err=> res.status(401).json({err}))
 
 
@@ -67,31 +69,82 @@ exports.deleteProduct = (req,res)=>{
 }
 
 exports.likeProduct = (req,res)=> {
-      let like = req.body.like;
-      let dislikes = req.body.dislikes;
-      const id = req.params.id;
-      const userId = req.body.userId;
-    if(like === 1){
-        Product.updateOne({_id: id},{
-            likes: 1,
-            usersLiked: [userId]
-        })
-        .then(()=>res.status(200).json({message: "Like Ajouté"}))
-        .catch((err)=> res.status(400).json({err}))
-    }else if(like === 0){
-        Product.updateOne({_id: id},{
-            likes: 0,
+    let like = req.body.like;
+    let userId = req.body.userId;
+    const id = req.params.id;
+
+    if (like === -1 || like === 0 || like === 1){
+        if (like === 1) {
+            Product.findById(id)
+            .then((product)=>addLike(product, userId, res))
+            .catch((err)=> res.status(400).json({err}))
             
-        })
-        .then(()=>res.status(200).json({message: "Annulation like dislike"}))
-        .catch((err)=> res.status(400).json({err}))
-    }else if(like === -1){
-        Product.updateOne({_id: id},{
-            dislikes: 1,
-            usersDisliked: [userId]
-        })
-        .then(()=>res.status(200).json({message: "Dislike Ajouté"}))
-        .catch((err)=> res.status(400).json({err}))
+            
+        }else if (like === -1) {
+            Product.findById(id)
+            .then((product)=>disLike(product, userId, res))
+            .catch((err)=> res.status(400).json({err}))
+            
+            
+        }else if (like === 0) {
+            Product.findById(id)
+            .then((product)=>removeLike(product, userId, res, like))
+            .catch((err)=> res.status(400).json({err}))
+            
+            
+        }
+    } else{
+        return res.status(400).json({error: "Bad Request"})
     }
-     
+}
+
+
+function addLike(product, userId, res) {
+    const userLiked = product.usersLiked
+        if (userLiked.includes(userId)) {
+            return res.status(401).json({error: "Bad Request"})
+        }else{
+            userLiked.push(userId)
+            ++product.likes;
+            product.save()
+            .then(()=> res.status(201).json({message: "produit sauvgardé"}))
+            .catch(err=> res.status(401).json({err}))
+
+            console.log(product);
+        }   
+}
+
+function disLike(product, userId, res) {
+    const userDisliked = product.usersDisliked
+        if (userDisliked.includes(userId)) {
+            return res.status(401).json({error: "Bad Request"})
+        }else{
+            userDisliked.push(userId)
+            ++product.dislikes;
+            product.save()
+            .then(()=> res.status(200).json({message: "produit sauvgardé"}))
+            .catch(err=> res.status(400).json({err}))
+            
+            console.log(product);
+        }   
+}
+
+function removeLike(product, userId, res, like) {
+    const userDisliked = product.usersDisliked
+    const userLiked = product.usersLiked
+
+    let likeUpdate = userLiked.includes(userId)? product.likes : product.dislikes
+    likeUpdate--
+    userLiked.includes(userId)? --product.likes : --product.dislikes
+
+    let arrUserId = [userLiked, userDisliked];
+    const filterUserId = arrUserId.filter(user => user !== userId)
+    arrUserId = filterUserId
+    
+    product.save()
+            .then(()=> res.status(200).json({message: "produit sauvgardé"}))
+            .catch(err=> res.status(400).json({err}))
+
+    console.log(product);
+
 }
